@@ -2,7 +2,8 @@
     (:require [reagent.core :as reagent :refer [atom]]
               [reagent.dom :as rd]
               [seven-guis.tasks.counter :refer [counter]]
-              [seven-guis.tasks.tempr-converter :refer [tempr-converter]]))
+              [seven-guis.tasks.tempr-converter :refer [tempr-converter]]
+              [seven-guis.tasks.flight-booker :refer [flight-booker]]))
 
 (enable-console-print!)
 
@@ -15,7 +16,8 @@
 (defn app []
   [:div
    [counter]
-   [tempr-converter]])
+   [tempr-converter]
+   [flight-booker]])
 
 (rd/render [app]
            (. js/document (getElementById "app")))

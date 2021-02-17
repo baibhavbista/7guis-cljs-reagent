@@ -28,9 +28,9 @@
 (set-validator! tempr-state
                 (fn [new-state]
                   (let [tempr-vals (vals new-state)
-                        are-all-numbers? (every? number? tempr-vals)
-                        are-all-nil? (every? nil? tempr-vals)]
-                    (or are-all-numbers? are-all-nil?))))
+                        all-are-numbers (every? number? tempr-vals)
+                        all-are-nil (every? nil? tempr-vals)]
+                    (or all-are-numbers all-are-nil))))
 
 (defn update-tempr!
   "Given `new-tempr` in `unit` (:celsius or :fahrenheit), updates both :celsius and :fahrenheit values in the ratom `tempr-state`.
