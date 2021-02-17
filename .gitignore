@@ -14,4 +14,5 @@ pom.xml
 .calva
 .clj-kondo/cache/
 .clj-kondo/.cache/
+.lsp/sqlite.db
 .lsp/sqlite.*.db
