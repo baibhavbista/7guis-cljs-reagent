@@ -1,7 +1,8 @@
 (ns seven-guis.core
     (:require [reagent.core :as reagent :refer [atom]]
               [reagent.dom :as rd]
-              [seven-guis.tasks.counter :refer [counter]]))
+              [seven-guis.tasks.counter :refer [counter]]
+              [seven-guis.tasks.tempr-converter :refer [tempr-converter]]))
 
 (enable-console-print!)
 
@@ -13,7 +14,8 @@
 
 (defn app []
   [:div
-   [counter]])
+   [counter]
+   [tempr-converter]])
 
 (rd/render [app]
            (. js/document (getElementById "app")))
