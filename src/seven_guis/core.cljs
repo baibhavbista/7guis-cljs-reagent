@@ -3,7 +3,8 @@
               [reagent.dom :as rd]
               [seven-guis.tasks.counter :refer [counter]]
               [seven-guis.tasks.tempr-converter :refer [tempr-converter]]
-              [seven-guis.tasks.flight-booker :refer [flight-booker]]))
+              [seven-guis.tasks.flight-booker :refer [flight-booker]]
+              [seven-guis.tasks.timer :refer [timer]]))
 
 (enable-console-print!)
 
@@ -17,7 +18,8 @@
   [:div
    [counter]
    [tempr-converter]
-   [flight-booker]])
+   [flight-booker]
+   [timer]])
 
 (rd/render [app]
            (. js/document (getElementById "app")))
