@@ -4,7 +4,8 @@
               [seven-guis.tasks.counter :refer [counter]]
               [seven-guis.tasks.tempr-converter :refer [tempr-converter]]
               [seven-guis.tasks.flight-booker :refer [flight-booker]]
-              [seven-guis.tasks.timer :refer [timer]]))
+              [seven-guis.tasks.timer :refer [timer]]
+              [seven-guis.tasks.crud :refer [crud]]))
 
 (enable-console-print!)
 
@@ -19,7 +20,8 @@
    [counter]
    [tempr-converter]
    [flight-booker]
-   [timer]])
+   [timer]
+   [crud]])
 
 (rd/render [app]
            (. js/document (getElementById "app")))
