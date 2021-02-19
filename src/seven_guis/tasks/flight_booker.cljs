@@ -1,6 +1,7 @@
 (ns seven-guis.tasks.flight-booker
   (:require [reagent.core :as r]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [seven-guis.utils :refer [input-event->value]]))
 
 (defn- date->string 
   "Takes a JS Date object `date` and returns a string of format `dd.mm.yyyy`"
@@ -112,13 +113,13 @@
     [:input {:class (when-not is-date-string-valid "error")
              :value @date-string
              :disabled disabled
-             :on-change #(update-date! flight-state date-type (.. % -target -value))}]))
+             :on-change #(update-date! flight-state date-type (input-event->value %))}]))
 
 (defn flight-booker []
   [:div.form
    [:select.input
     {:on-change (fn [e]
-                  (swap! flight-state assoc :flight-type (.. e -target -value)))}
+                  (swap! flight-state assoc :flight-type (input-event->value e)))}
     (for [flight-type flight-types]
       ^{:key flight-type} [:option {:value flight-type} flight-type])]
    [:br]

@@ -1,6 +1,7 @@
 (ns seven-guis.tasks.tempr-converter
   (:require [reagent.core :as r]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [seven-guis.utils :refer [input-event->value]]))
 
 (defn f->c
   "Convert `deg-f` (in Fahrenheit) to Celsius."
@@ -55,7 +56,7 @@
 (defn event->float
   "Extracts value string from event `e` (in js, event.target.value) and converts it to float."
   [e]
-  (let [val-str (-> e .-target .-value)]
+  (let [val-str (input-event->value e)]
     (when-not (string/blank? val-str)
       (js/parseFloat val-str))))
 

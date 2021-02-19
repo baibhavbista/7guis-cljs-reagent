@@ -1,6 +1,7 @@
 (ns seven-guis.tasks.timer
   (:require [reagent.core :as r]
-            [cljs.core.async :as async :refer [chan go-loop timeout <! >!]]))
+            [cljs.core.async :as async :refer [chan go-loop timeout <! >!]]
+            [seven-guis.utils :refer [input-event->value]]))
 
 ;;; NOTE: cljs.core.async is probably over-the-top for this problem, but I had just learned about it and wanted to practice
 ;;; A simpler solution would have been if js/setInterval was used for the "tick"
@@ -74,7 +75,7 @@
            {:type :range
             :value duration
             :on-change (fn [e] (set-duration! timer-state
-                                              (js/parseFloat (.. e -target -value))))
+                                              (js/parseFloat (input-event->value e))))
             :step 1
             :min 0
             :max 100}]
