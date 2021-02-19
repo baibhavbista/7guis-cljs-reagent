@@ -1,81 +1,85 @@
 (ns seven-guis.tasks.timer
   (:require [reagent.core :as r]
-            [cljs.core.async :as async :refer [chan go go-loop timeout <! >!]]))
+            [cljs.core.async :as async :refer [chan go-loop timeout <! >!]]))
 
-(defn s->ms [s] (* s 1000))
-(defn ms->s [ms] (/ ms 1000))
+;;; NOTE: cljs.core.async is probably over-the-top for this problem, but I had just learned about it and wanted to practice
+;;; A simpler solution would have been if js/setInterval was used for the "tick"
 
-(def initial-state {:elapsed-ms  0
-                    :duration-ms (s->ms 5)})
+;; Initial state of timer
+;; values of both :elapsed and :duration are times and are in seconds
+(def initial-state {:elapsed  0
+                    :duration 11})
 
-(defonce timer-state (r/atom initial-state))
+;; function that returns a channel prepended with "<", as
+;; per suggestion by Eric Normand
+(defn <tick-channel 
+  "Returns a somewhat-drift-correcting channel that ticks every `tick-interval-ms` milliseconds"
+  [tick-interval-ms]
+  (let [tick-chan (chan)
+        start-time (js/Date.now)]
+    (go-loop [i 1]
+      (let [delay (- (+ start-time (* i tick-interval-ms))
+                     (js/Date.now))] ; delay as a measure of reducing drift
+        (<! (timeout delay))
+        (>! tick-chan i))
+      (recur (inc i)))
+    tick-chan))
 
-;; TODO: core.async looks like diverges since swap! function takes 
-;; some time. so, try with js/setInterval
+(defn set-duration!
+  "Given an atom that is of the form {:elapsed ... :duration ...}, sets value for :duration to `duration`.
+   In case new `duration` is less than (:elapsed timer-state), also modifies :elapsed "
+  [timer-state duration]
+  (if (> (:elapsed @timer-state) duration)
+    ;; if elapsed time > new duration, timer is made full
+    ;;    set both :elapsed-ms and :duration-ms to new duration
+    (swap! timer-state merge {:duration duration
+                              :elapsed  duration})
+    ;; else if elapsed time < new duration time, only update :duration-ms and continue as normal
+    (swap! timer-state assoc  :duration duration)))
 
-(def tick-chan (chan))
-(def tick-interval-ms 100)
-(go (while true 
-      (<! (timeout tick-interval-ms))
-      (>! tick-chan "tick")))
-(go
-  (let [{:keys [elapsed-ms duration-ms]} @timer-state]
-    (<! tick-chan)
-    (swap! timer-state assoc :elapsed-ms
-           (min duration-ms
-                (+ elapsed-ms tick-interval-ms)))))
+(defn reset-timer! 
+  "Resets the timer whose state is stored in `timer-state` i.e. sets elapsed time to 0 "
+  [timer-state]
+  (swap! timer-state assoc :elapsed 0))
 
-(defn fix-to-precision [digits]
-  (fn [number]
-    (-> number
-        js/parseFloat
-        (.toFixed digits))))
-
-(defn display-time-s [time-s]
-  (let [fix-to-1-digit-after-decimal (fix-to-precision 1)]
-    (fix-to-1-digit-after-decimal time-s)))
-
-(comment
-  (display-time-s 3.423))
-
-(defn set-duration! [timer-state duration-in-s]
-  (let [duration-in-ms (s->ms duration-in-s)]
-    (if (> (:elapsed-ms @timer-state) duration-in-ms)
-      ;; if elapsed time > new duration, timer is made full
-      ;;    set both :elapsed-ms and :duration-ms to new duration
-      (swap! timer-state merge {:duration-ms duration-in-ms
-                                :elapsed-ms duration-in-ms})
-      ;; else if elapsed time < new duration time, only update :duration-ms and continue as normal
-      (swap! timer-state assoc :duration-ms duration-in-ms))))
-
-(defn reset-timer! [timer-state]
-  (swap! timer-state assoc :elapsed-ms 0))
-
-(defn timer []
-  (let [{:keys [elapsed-ms duration-ms]} @timer-state
-        elapsed-s (ms->s elapsed-ms)
-        display-elapsed-s (display-time-s elapsed-s)
-        duration-s (ms->s duration-ms)
-        display-duration-s (display-time-s duration-s)]
-    [:div.form
-     [:label
-      "Elapsed Time:"
-      [:progress
-       {:value elapsed-s
-        :max   duration-s}]
-      [:output display-elapsed-s]]
-     [:br]
-     [:label "Duration"
-      [:input
-       {:type :range
-        :value duration-s
-        :on-change (fn [e] (set-duration! timer-state
-                                          (.. e -target -value)))
-        :step 1
-        :min 0
-        :max 100}]
-      [:output (js/parseInt display-duration-s)]]
-     [:br]
-     [:button
-      {:on-click (fn [_e] (reset-timer! timer-state))}
-      "Reset"]]))
+;; used type 2 form of reagent components to do some setting up of states, go blocks and tick channels 
+(defn timer
+  []
+  (let [timer-state      (r/atom initial-state)
+        tick-interval-ms 50
+        tick-interval-s  (/ tick-interval-ms 1000)
+        tick-channel     (<tick-channel tick-interval-ms)]
+    ;; a go block that increments :elapsed of `timer-state` at every tick of `tick-channel` 
+    (go-loop []
+      (<! tick-channel)
+      (swap! timer-state
+             (fn [{:keys [elapsed duration] :as state}]
+               (assoc state :elapsed (min duration
+                                          (+ elapsed tick-interval-s)))))
+      (recur))
+    (fn []
+      (let [{:keys [elapsed duration]} @timer-state
+            display-elapsed  (str (.toFixed elapsed 1) "s")
+            display-duration (str (.toFixed duration 0) "s")]
+        [:div.form
+         [:label
+          "Elapsed Time:"
+          [:progress
+           {:value elapsed
+            :max   duration}]
+          [:output display-elapsed]]
+         [:br]
+         [:label "Duration"
+          [:input
+           {:type :range
+            :value duration
+            :on-change (fn [e] (set-duration! timer-state
+                                              (js/parseFloat (.. e -target -value))))
+            :step 1
+            :min 0
+            :max 100}]
+          [:output display-duration]]
+         [:br]
+         [:button
+          {:on-click (fn [_e] (reset-timer! timer-state))}
+          "Reset"]]))))
