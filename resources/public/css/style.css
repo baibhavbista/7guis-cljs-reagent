@@ -3,3 +3,32 @@
 .error {
   background: #ee4c4c;
 }
+
+.column {
+  display: flex;
+  margin-right: 1em;
+  flex-grow: 1;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.crud--input {
+  flex-grow: 1;
+  margin-left: 1em;
+}
+
+.crud--label {
+  margin-bottom: 1em;
+}
+
+.crud--button {
+  flex-grow: 0.3;
+  margin-top: 1em;
+  margin-right: 1em;
+}
