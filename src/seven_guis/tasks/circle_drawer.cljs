@@ -1,6 +1,10 @@
 (ns seven-guis.tasks.circle-drawer
   (:require [reagent.core :as r]
-            [seven-guis.utils :refer [vecmap-assoc-pred]]))
+            [seven-guis.utils :refer [vecmap-assoc-pred input-event->value]]
+            [reagent-contextmenu.menu :as menu]))
+
+;;; P.S. added a library `reagent-contextmenu` for the context menu as it looks pretty good
+;;; TODO-LATER: replace it with own context-menu component
 
 ;;; REPRESENTATION OF CIRCLE 
 ;;; A map with keys :x :y :r for x-coordinate, y-coordinate and radius respectively
@@ -31,7 +35,11 @@
   (let [init-history (list init-working-state)]
     (r/atom {:working-state init-working-state
              :history       init-history
-             :current-index 0})))
+             :current-index 0
+             :resize-dialog {:x 0
+                             :y 0
+                             :r 0
+                             :display nil}})))
 
 (defn update-working-state!
   "Updates working state of atom `app-state` by applying function `f`.
@@ -64,8 +72,8 @@
                          ;; add new working state to the front of history list 
                          (cons new-working-state))]
     (assoc old-app-state :working-state new-working-state
-                         :history       new-history
-                         :current-index new-current-index)))
+           :history       new-history
+           :current-index new-current-index)))
 
 (defn- next-app-state-after-undo
   [old-app-state]
@@ -73,7 +81,7 @@
         new-index         (inc current-index)
         new-working-state (nth history new-index)]
     (assoc old-app-state :current-index new-index
-                         :working-state new-working-state)))
+           :working-state new-working-state)))
 
 (defn undo!
   [app-state]
@@ -92,7 +100,7 @@
         new-index         (dec current-index)
         new-working-state (nth history new-index)]
     (assoc old-app-state :current-index new-index
-                         :working-state new-working-state)))
+           :working-state new-working-state)))
 
 (defn redo!
   [app-state]
@@ -109,8 +117,8 @@
   (let [is-required-circle? (fn [circle-map]
                               (and (= x (:x circle-map))
                                    (= y (:y circle-map))))]
-    (swap! app-state 
-           next-app-state-without-checkpoint 
+    (swap! app-state
+           next-app-state-without-checkpoint
            ;; function that takes a list of circles(working-state)
            ;; and updates the circle with center (`x`, `y`) to have radius `r`  
            (fn [old-working-state-vecmap]
@@ -118,8 +126,6 @@
                                 is-required-circle?
                                 :r
                                 r)))))
-
-(update-radius-circle! app-state 100 100 40)
 
 (defn create-circle! [app-state x y]
   (let [circle-map {:x x :y y :r DEFAULT_RADIUS}]
@@ -136,31 +142,67 @@
     #_(println "Left clicked on" x-coord "," y-coord)
     (create-circle! app-state x-coord y-coord)))
 
-(defn handle-right-click-on-circle [e]
-  (.preventDefault e)
-  (.stopPropagation e)
+(defn set-and-show-resize-dialog! [app-state x y r]
+  (swap! app-state assoc :resize-dialog {:x x
+                                         :y y
+                                         :r r
+                                         :display "block"}))
+
+(defn save-and-close-resize-dialog! [app-state]
+  (swap! app-state assoc :resize-dialog nil)
+  (let [working-state (:working-state @app-state)
+        last-saved-state (-> @app-state :history first)]
+    ;; when radius has been changed from within resize-dialog i.e. working state and last saved state are different
+    ;;     add the current working-state to history 
+    (when (not= working-state last-saved-state)
+      ;; pass `identity` as `next-working-state-f` as we already have required new radius in our working-state
+      (swap! app-state next-app-state-with-checkpoint identity))))
+
+
+(defn handle-right-click-on-circle [app-state e]
+  ;; (.preventDefault e)
+  ;; (.stopPropagation e)
   (let [circle (-> e .-target)
         cx-val (-> circle .-cx .-baseVal .-value)
         cy-val (-> circle .-cy .-baseVal .-value)
         r-val  (-> circle .-r  .-baseVal .-value)]
-    (println "Right clicked on circle of radius" r-val "at (" cx-val "," cy-val ")")))
+    #_(println "Right clicked on circle of radius" r-val "at (" cx-val "," cy-val ")")
+    (menu/context!
+     e
+     [[[:span.cmd "Adjust diameter..."] 
+       #(set-and-show-resize-dialog! app-state cx-val cy-val r-val)]])))
 
-(defn resize-frame []
-  [:div
-   [:div.overlay {:on-click #(str "End resize here" %)}
-    [:div.resizer]]])
+(defn resize-dialog []
+  (let [state (r/cursor app-state [:resize-dialog])]
+    (when (:display @state)
+      [:div
+       [:div.circle-drawer--overlay {:on-click #(save-and-close-resize-dialog! app-state)}]
+       [:div.circle-drawer--dialog.column
+        [:label
+         (str "Adjust diameter of circle at (" (:x @state) ", " (:y @state) ").")]
+        [:input
+         {:type :range
+          :value (:r @state)
+          :on-change (fn [e]
+                       (let [new-r (js/parseFloat (input-event->value e))]
+                         (swap! state assoc :r new-r)
+                         (update-radius-circle! app-state (:x @state) (:y @state) new-r)))
+          :step 1
+          :min 1
+          :max 200}]]])))
 
-(defn circle-svg [{:keys [x y r]}]
+(defn circle-svg [{:keys [x y r]} right-click-handler]
   [:circle {:cx x
             :cy y
             :r r
             :fill "white"
             :stroke "black"
             :on-click (fn [e] (.preventDefault e) (.stopPropagation e))
-            :on-context-menu handle-right-click-on-circle}])
+            :on-context-menu right-click-handler}])
 
 (defn circle-drawer []
   [:div.column.circle-drawer--wrapper
+   [resize-dialog]
    [:div.row.circle-drawer--buttons
     [:button
      {:on-click (fn [_e] (undo! app-state))
@@ -172,5 +214,11 @@
       :disabled (not (can-redo? (:current-index @app-state)))}
      "Redo"]]
    [:div.row.circle-drawer--canvas
-    (into [:svg {:on-click #(handle-left-click-on-canvas app-state %)}]
-          (map circle-svg (get @app-state :working-state)))]])
+    [menu/context-menu]
+    [:svg {:on-click #(handle-left-click-on-canvas app-state %)}
+     (for [[id circle-map] (map-indexed vector (get @app-state :working-state))]
+       ^{:key id} [circle-svg 
+                   circle-map
+                   (fn [e] (handle-right-click-on-circle app-state e))])]
+    #_(into [:svg {:on-click #(handle-left-click-on-canvas app-state %)}]
+            (map circle-svg (get @app-state :working-state)))]])

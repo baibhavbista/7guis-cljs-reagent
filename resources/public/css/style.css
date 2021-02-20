@@ -49,20 +49,23 @@
 .circle-drawer--overlay {
   position: fixed;
   top: 0;
-  bottom: 0;
   left: 0;
-  right: 0;
-  background: transparent;
-  /* background-color: rgba(0,0,0,0.5); Black background with opacity */
+  width: 100vw;
+  height: 100vh;
+  z-index: 99;
+  /* background: transparent; */
+  background-color: rgba(0,0,0,0.2);
 }
 
-.circle-drawer--resizer {
-  background: rgba(200,200,200,.5);
-  position: absolute;
+.circle-drawer--dialog {
+  position: fixed;
   top: 50%;
   left: 20px;
   right: 20px;
   transform: translateY(-50%);
+  z-index: 100;
+  background-color: white;
+  border: 1px solid #aaa;
   text-align: center;
 }
 
@@ -75,6 +78,7 @@ svg {
   background: white;
   width: 100%;
   height: 100%;
+  border: 1px solid black;
 }
 
 circle:hover {
