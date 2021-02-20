@@ -32,3 +32,51 @@
   margin-top: 1em;
   margin-right: 1em;
 }
+
+.circle-drawer--wrapper {
+  position: relative;
+  max-width: 400px;
+  margin: auto;
+  text-align: left;
+}
+
+.circle-drawer--canvas {
+  position: relative;
+  width: 100%;
+  height: 400px;
+}
+
+.circle-drawer--overlay {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  /* background-color: rgba(0,0,0,0.5); Black background with opacity */
+}
+
+.circle-drawer--resizer {
+  background: rgba(200,200,200,.5);
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  transform: translateY(-50%);
+  text-align: center;
+}
+
+.circle-drawer--buttons {
+  margin: auto;
+  width: max-content;
+}
+
+svg {
+  background: white;
+  width: 100%;
+  height: 100%;
+}
+
+circle:hover {
+  fill: #eee;
+}
