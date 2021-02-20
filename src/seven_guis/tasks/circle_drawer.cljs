@@ -1,22 +1,37 @@
 (ns seven-guis.tasks.circle-drawer
-  (:require [reagent.core :as r]))
+  (:require [reagent.core :as r]
+            [seven-guis.utils :refer [vecmap-assoc-pred]]))
+
+;;; REPRESENTATION OF CIRCLE 
+;;; A map with keys :x :y :r for x-coordinate, y-coordinate and radius respectively
+;;; {:x x :y y :r r}
 
 (def DEFAULT_RADIUS 30)
 
-(def init-state [])
+(def init-working-state [{:x 100 :y 100 :r 20}])
+
+;;; TYPES OF STATES
+;;; working-state: Current working state of data, it is a vector of circles displayed on the screen. 
+;;;                init-working-state is our initial working state 
+;;; app-state:     Complete state of app. 
+;;;                app-state contains 
+;;;                1. working-state, 
+;;;                2. history: list of older working-states. 
+;;;                            Note that it is a list: new states when checkpointed are inserted to the from of this list
+;;;                            (list init-working-state) is our initial history
+;;;                3. current-index : where we are in history
+;;;                                   normally 0 (pointing to front of list)
+;;;                                   when undo is done, current-index is incremented (i.e. going to older states)
+;;;                                   when redo is done, current-index is decremented (i.e. going to newer states)
+;;;
+;;; NOTE: this is an important distinction. When you see working state below, it only means a vector of circles. 
+;;; However, when you see mention to app state, it refers to the entire app state, which includes the working state as well 
 
 (defonce app-state
-  (let [init-history (list init-state)]
-    (r/atom {:history       init-history
-             :current-index 0
-             :working-state init-state})))
-
-(defn vecmap-assoc-pred
-  "Matches the first map in the vector of maps `vm` that satisfies given predicate `pred` and maps `key` to `val` in the matched map"
-  [vm pred key val]
-  (let [i (some (fn [[i m]] (when (pred m) i))
-                (map-indexed vector vm))]
-    (update vm i #(assoc % key val))))
+  (let [init-history (list init-working-state)]
+    (r/atom {:working-state init-working-state
+             :history       init-history
+             :current-index 0})))
 
 (defn update-working-state!
   "Updates working state of atom `app-state` by applying function `f`.
@@ -28,29 +43,41 @@
 
 (drop 0 '(1 2 3))
 
-(defn update-working-state-and-checkpoint!
-  [app-state f]
+(defn next-app-state-without-checkpoint
+  "Returns new app-state after applying `next-working-state-f` to working state i.e. (:working-state old-app-state)
+   NOTE: this function does not checkpoint and therefore should only be used for changes that don't have to be stored in undo/redo history.
+         For significant changes (wrt undo/redo history), use the function `next-app-state-with-checkpoint`"
+  [old-app-state next-working-state-f]
+  (update old-app-state :working-state next-working-state-f))
+
+(defn next-app-state-with-checkpoint
+  "Returns new app-state after applying `next-working-state-f` to working state i.e. (:working-state old-app-state)
+   This function also checkpoints the new working-state i.e. adds the new working-state to :history list"
+  [old-app-state next-working-state-f]
   (let [{:keys [history current-index working-state]} @app-state
-        new-working-state (f working-state)
+        new-working-state (next-working-state-f working-state)
         new-current-index 0
         new-history (->> history
-                         ;; if in states where possibility of redo, drop all those states we can reach by redo, since we should not be able to access
-                         ;; such states after editing
+                         ;; if in a state where possibility of redo, drop all those states we can reach by redo, 
+                         ;; they should not be able to be accessed after editing
                          (drop current-index)
-                         ;; add new-working state to the front of history list 
+                         ;; add new working state to the front of history list 
                          (cons new-working-state))]
-    (swap! app-state 
-           #(assoc % :working-state new-working-state
-                     :history       new-history
-                     :current-index new-current-index))))
+    (assoc old-app-state :working-state new-working-state
+                         :history       new-history
+                         :current-index new-current-index)))
+
+(defn- next-app-state-after-undo
+  [old-app-state]
+  (let [{:keys [current-index history]} old-app-state
+        new-index         (inc current-index)
+        new-working-state (nth history new-index)]
+    (assoc old-app-state :current-index new-index
+                         :working-state new-working-state)))
 
 (defn undo!
   [app-state]
-  (swap! app-state (fn [{:keys [current-index history] :as old-state}]
-                     (let [new-index         (inc current-index)
-                           new-working-state (nth history new-index)]
-                       (assoc old-state :current-index new-index
-                                        :working-state new-working-state)))))
+  (swap! app-state next-app-state-after-undo))
 
 (defn can-undo?
   [current-index history]
@@ -59,39 +86,46 @@
     ;; i.e. if `new-index-after-undo` < num of states in history
     (< new-index-after-undo (count history))))
 
+(defn- next-app-state-after-redo
+  [old-app-state]
+  (let [{:keys [current-index history]} old-app-state
+        new-index         (dec current-index)
+        new-working-state (nth history new-index)]
+    (assoc old-app-state :current-index new-index
+                         :working-state new-working-state)))
+
 (defn redo!
   [app-state]
-  (swap! app-state (fn [{:keys [current-index history] :as old-state}]
-                     (let [new-index         (dec current-index)
-                           new-working-state (nth history new-index)]
-                       (assoc old-state :current-index new-index
-                                        :working-state new-working-state)))))
+  (swap! app-state next-app-state-after-redo))
 
 (defn can-redo?
   [current-index]
   (let [new-index-after-redo (dec current-index)]
     (>= new-index-after-redo 0)))
 
-(assoc {:a 1} :a 2 :b 3 :d 21)
-
-(defn update-radius-circle! 
+(defn update-radius-circle!
   "Update the circle centered at (`x`, `y`) to have radius `r`"
   [app-state x y r]
   (let [is-required-circle? (fn [circle-map]
                               (and (= x (:x circle-map))
                                    (= y (:y circle-map))))]
-    (update-working-state! app-state
-                           (fn [old-working-state-vecmap]
-                             ;; check if can be done using map
-                             (vecmap-assoc-pred old-working-state-vecmap
-                                                is-required-circle?
-                                                :r
-                                                r)))))
+    (swap! app-state 
+           next-app-state-without-checkpoint 
+           ;; function that takes a list of circles(working-state)
+           ;; and updates the circle with center (`x`, `y`) to have radius `r`  
+           (fn [old-working-state-vecmap]
+             (vecmap-assoc-pred old-working-state-vecmap
+                                is-required-circle?
+                                :r
+                                r)))))
+
+(update-radius-circle! app-state 100 100 40)
 
 (defn create-circle! [app-state x y]
   (let [circle-map {:x x :y y :r DEFAULT_RADIUS}]
-    (update-working-state-and-checkpoint! app-state
-                                          #(conj % circle-map))))
+    (swap! app-state
+           next-app-state-with-checkpoint
+           #(conj % circle-map))))
 
 (defn handle-left-click-on-canvas [app-state e]
   (let [bounding-client-rect (-> e .-target .getBoundingClientRect)
@@ -99,7 +133,7 @@
         client-y (-> e .-clientY)
         x-coord (- client-x (.-x bounding-client-rect))
         y-coord (- client-y (.-y bounding-client-rect))]
-    (println "Left clicked on" x-coord "," y-coord)
+    #_(println "Left clicked on" x-coord "," y-coord)
     (create-circle! app-state x-coord y-coord)))
 
 (defn handle-right-click-on-circle [e]
@@ -128,12 +162,12 @@
 (defn circle-drawer []
   [:div.column.circle-drawer--wrapper
    [:div.row.circle-drawer--buttons
-    [:button 
+    [:button
      {:on-click (fn [_e] (undo! app-state))
       :disabled (not (can-undo? (:current-index @app-state)
                                 (:history @app-state)))}
      "Undo"]
-    [:button 
+    [:button
      {:on-click (fn [_e] (redo! app-state))
       :disabled (not (can-redo? (:current-index @app-state)))}
      "Redo"]]
