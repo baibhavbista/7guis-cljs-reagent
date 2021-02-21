@@ -10,7 +10,8 @@
                  [org.clojure/clojurescript "1.10.773"]
                  [org.clojure/core.async  "0.4.500"]
                  [reagent "0.10.0" :exclusions [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server]]
-                 [org.clojars.frozenlock/reagent-contextmenu "0.4.3"]]
+                 [org.clojars.frozenlock/reagent-contextmenu "0.4.3"]
+                 [instaparse "1.4.10"]]
 
   :plugins [[lein-figwheel "0.5.20"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]

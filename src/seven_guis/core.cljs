@@ -6,7 +6,8 @@
               [seven-guis.tasks.flight-booker :refer [flight-booker]]
               [seven-guis.tasks.timer :refer [timer]]
               [seven-guis.tasks.crud :refer [crud]]
-              [seven-guis.tasks.circle-drawer :refer [circle-drawer]]))
+              [seven-guis.tasks.circle-drawer :refer [circle-drawer]]
+              [seven-guis.tasks.cells :refer [cells]]))
 
 (enable-console-print!)
 
@@ -23,7 +24,8 @@
    [flight-booker]
    [timer]
    [crud]
-   [circle-drawer]])
+   [circle-drawer]
+   [cells]])
 
 (rd/render [app]
            (. js/document (getElementById "app")))
