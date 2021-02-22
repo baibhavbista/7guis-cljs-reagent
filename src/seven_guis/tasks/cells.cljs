@@ -69,32 +69,58 @@
     decimal = #'-?\\d+(\\.\\d*)?'
     "))
 
-(defn parse-formula [formula-str]
+(defn parsed-formula->parsed-formula-with-refs
+  "Converts :cell to :ref and and :range to :refs 
+   example: [:cell `A1`]                       => [:refs [1 1]]
+            [:range [:cell `A1`] [:cell `B2`]] => [:refs [1 1] [2 1] [1 2] [2 2]]"
+  [parsed-formula]
+  (insta/transform
+   {:cell #(let [c (char->col-num (.charAt % 0))
+                 r (js/parseInt (subs % 1))
+                 key (vector c r)]
+             [:refs key])
+    :range (fn [cell1 cell2]
+             (let [[_:ref [c1 r1]] cell1
+                   [_:ref [c2 r2]] cell2]
+               (into [:refs] (for [row (range r1 (inc r2))
+                                   col (range c1 (inc c2))]
+                               [col row]))))}
+   parsed-formula))
+
+#_(defn parse-formula [formula-str]
   (let [parsed-formula (parser formula-str)]
     (if (insta/failure? parsed-formula)
-      [:invalid]
+      (ex-info "ERR!" {:detailed-error (str (insta/get-failure parsed-formula))})
       parsed-formula)))
 
-(parse-formula "=add(1,2)")
-;; => [:formula [:expr [:app [:ident "add"] [:expr [:decimal "1"]] [:expr [:decimal "2"]]]]]
+(defn parsed-formula-with-refs [formula-str]
+  (let [parsed-formula (parser formula-str)]
+    (if (insta/failure? parsed-formula)
+      (ex-info "ERR!" {:detailed-error (str (insta/get-failure parsed-formula))})
+      (parsed-formula->parsed-formula-with-refs parsed-formula))))
 
-(parse-formula "=sub(B1,B3)")
-;; => [:formula [:expr [:app [:ident "sub"] [:expr [:cell "B1"]] [:expr [:cell "B3"]]]]]
 
-(parse-formula "=prod(B1:B3)")
-;; [:formula [:expr [:app [:ident "prod"] [:expr [:range [:cell "B1"] [:cell "B3"]]]]]]
+(parsed-formula-with-refs "")
+;; (parse-formula "=add(1,2)")
+;; ;; => [:formula [:expr [:app [:ident "add"] [:expr [:decimal "1"]] [:expr [:decimal "2"]]]]]
 
-(parse-formula "=B1:B3")
-;; => [:invalid]
+;; (parse-formula "=sub(B1,B3)")
+;; ;; => [:formula [:expr [:app [:ident "sub"] [:expr [:cell "B1"]] [:expr [:cell "B3"]]]]]
 
-(parse-formula "54")
-;; => [:formula [:decimal "54"]]
+;; (parse-formula "=prod(B1:B3)")
+;; ;; [:formula [:expr [:app [:ident "prod"] [:expr [:range [:cell "B1"] [:cell "B3"]]]]]]
 
-(apply concat [[1 2]] [[3 4]] [])
-;; => ([1 2] [3 4])
+;; (parse-formula "=B1:B3")
+;; ;; => [:invalid]
 
-(apply concat [[1 2] [3 4]] [])
-;; => ([1 2] [3 4])
+;; (parse-formula "54")
+;; ;; => [:formula [:decimal "54"]]
+
+;; (apply concat [[1 2]] [[3 4]] [])
+;; ;; => ([1 2] [3 4])
+
+;; (apply concat [[1 2] [3 4]] [])
+;; ;; => ([1 2] [3 4])
 
 
 
@@ -106,97 +132,106 @@
 ;; (defn vectorify [& args]
 ;;   (if (vector? )))
 
-(defn parsed-formula->parsed-formula-with-refs
-  "Converts :cell and :range to :refs
-   example: [:cell `A1`]                       => [:ref [1 1]]
-            [:range [:cell `A1`] [:cell `B2`]] => [:refs [1 1] [2 1] [1 2] [2 2]]"
-  [parsed-formula]
-  (insta/transform
-   {:cell #(let [c (char->col-num (.charAt % 0))
-                 r (js/parseInt (subs % 1))
-                 key (vector c r)]
-             [:ref key])
-    :range (fn [cell1 cell2]
-             (let [[_:ref [c1 r1]] cell1
-                   [_:ref [c2 r2]] cell2]
-               (into [:refs] (for [row (range r1 (inc r2))
-                                   col (range c1 (inc c2))]
-                               [col row]))))}
-   parsed-formula))
-
 ;; (-> "=A1"
 ;;     parse-formula
 ;;     parsed-formula->parsed-formula-with-refs)
 
-;; (-> "=A1:B2"
+;; (-> "=add(sum(A1:B2),B3)"
 ;;     parse-formula
 ;;     parsed-formula->parsed-formula-with-refs)
 
 
 (defn eval-formula
-  [sheet parsed-formula]
-  (let [parsed-formula-with-refs (parsed-formula->parsed-formula-with-refs parsed-formula)]
+  [sheet parsed-formula-with-refs]
+  (if (ex-message parsed-formula-with-refs)
+    parsed-formula-with-refs                         ; if error while parsing return ExceptionInfo object directly
     (insta/transform
      #_{:refs    (fn [& keys] (for [key keys]
-                              (-> (get sheet key)
-                                  deref
-                                  (get :value))))}
+                                (-> (get sheet key)
+                                    deref
+                                    (get :value))))}
      {:decimal #(js/parseFloat %)
-      :ident   (fn [ident] (identifier->function ident))
+      :ident   (fn [ident] (identifier->function (string/lower-case ident)))
       :textual #(constantly 0.0)
-      :ref     (fn [key] 
-                 (let [cell-atom (get sheet key)] 
+      :ref     (fn [key]
+                 (let [cell-atom (get sheet key)]
                    (:value @cell-atom)))
-      :refs    (fn [& keys] (for [key keys]
-                              (-> (get sheet key)
-                                  deref
-                                  (get :value))))
+      :refs    (fn [& keys]
+                 (for [key keys]
+                   #_(let [cell-atom (get sheet key)]
+                       (:value @cell-atom))
+                   (-> (get sheet key)
+                       deref
+                       (get :value))))
       :app     (fn [f & args]
                  (apply f (flatten args)))
       :expr    identity
       :formula identity}
      parsed-formula-with-refs)))
 
-(->> [3 1]
-     (get sheet)
-     deref)
+;; (flatten [[2] [3]])
+;; (flatten [[2 3]])
 
-(filter (fn [[_ atom]]
-          (:value @atom))
-        sheet)
 
-(->> "=add(C0,C1)"
-     parse-formula
-     (eval-formula sheet))
+;; (filter (fn [[_ atom]]
+;;           (:value @atom))
+;;         sheet)
+
+;; (->> "4"
+;;      parse-formula
+;;      (eval-formula sheet))
+
+;; (->> "=add(C0,C1)"
+;;      parse-formula
+;;      (eval-formula sheet))
+
+;; (->> "=sum(C0:C2)"
+;;      parse-formula
+;;      (eval-formula sheet))
+
 
 (defn- keys-of-cells-formula-depends-on
   [formula]
-  #_(when [parsed-formula (parse-formula formula)]
-      (insta/transform
-       {:cell #(let [c (char->col-num (.charAt % 0))
-                     r (js/parseInt (subs % 1))
-                     key (vector c r)]
-                 [:refs key])
-        :range (fn [cell1 cell2]
-                 (let [[_:refs [c1 r1]] cell1
-                       [_:refs [c2 r2]] cell2]
-                   (into [:refs] (for [row (range r1 (inc r2))
-                                       col (range c1 (inc c2))]
-                                   [col row]))))
-        :decimal (constantly nil)
-        :textual (constantly nil)
-        :ident   (constantly nil)
-        :app     (fn [& args] (into [] (filter identity args)))
-        :expr    identity
-        :formula identity}
-       parsed-formula))
-  [])
+  #_(->> formula
+       parse-formula
+       parsed-formula->parsed-formula-with-refs
+       (insta/transform))
+  (when formula
+    (let [parsed-formula-with-refs (parsed-formula-with-refs formula)]
+      (when-not (ex-message parsed-formula-with-refs)  ; return nil when parser error (when parsed-formula-with-refs returns ExceptionInfo) 
+        (insta/transform
+         {:decimal (constantly nil)
+          :textual (constantly nil)
+          :ident   (constantly nil)
+          :refs    (fn [& args] (vec args))
+          :app     (fn [& args] (apply concat args))
+          :expr    identity
+          :formula identity}
+         parsed-formula-with-refs))))
+  #_[])
 
-(parse-formula "=add(B1,B2)")
-;; => [:formula [:expr [:app [:ident "add"] [:expr [:cell "B1"]] [:expr [:cell "B2"]]]]]
+;; (parsed-formula-with-refs "3")
+;; ;; => [:formula [:decimal "3"]]
 
-(keys-of-cells-formula-depends-on "=add(B1,B2)")
-;; => ["add"]
+;; (keys-of-cells-formula-depends-on nil)
+
+;; (concat nil [[1 2] [1 3] [1 5]])
+;; ;; => ([1 2] [1 3] [1 5])
+
+;; (concat nil [[1 2]] [[1 3]])
+;; ;; => ([1 2] [1 3])
+
+
+;; (parse-formula "=add(B1,B2)")
+;; ;; => [:formula [:expr [:app [:ident "add"] [:expr [:cell "B1"]] [:expr [:cell "B2"]]]]]
+
+;; (keys-of-cells-formula-depends-on "=add(B1,B2)")
+;; ;; => [[[1 1]] [[1 2]]]
+
+;; (keys-of-cells-formula-depends-on "=sum(add(A1,sum(A3:A9)),B3,C11)")
+;; [[[[0 1] [1 1] [0 2] [1 2]]] [[1 3]]]
+
+;; (parsed-formula-with-refs nil)
 
 
 
@@ -208,13 +243,12 @@
 ;; [:formula [:expr [:app [:ident "add"] [:expr [:cell "B1"]] [:expr [:app [:ident "prod"] [:expr [:range [:cell "B1"] [:cell "C3"]]]]]]]]
 
 
-(for [x nil]
-  x)
 
 (defn remove-cell-watches!
-  "Removes watches on the cell. Call before changing cell formula or value"
+  "Removes watches on the cell. should be called before changing cell formula"
   [sheet cell-state]
   (let [{:keys [formula key]} @cell-state]
+    #_(println "formula =" formula "key =" key)
     (doseq [watched-cell-key (keys-of-cells-formula-depends-on formula)
             :let [watched-cell (get sheet watched-cell-key)]]
       (remove-watch watched-cell key))))
@@ -222,21 +256,20 @@
 (defn set-cell-formula!
   [sheet cell-state formula]
   (remove-cell-watches! sheet cell-state)
-  (println "set-cell-formula called with" formula)
-  (let [parsed-formula (parse-formula formula)]
+  (let [parsed-formula-with-refs (parsed-formula-with-refs formula)]
     (doseq [key-of-cell-to-watch (keys-of-cells-formula-depends-on formula)
             :let [cell-to-watch (get sheet key-of-cell-to-watch)]]
       (add-watch cell-to-watch (:key @cell-state)
                  (fn [_key _reference old-state new-state]
                    (when (not= (:value old-state) (:value new-state))
                      (go
-                       (->> parsed-formula
+                       (->> parsed-formula-with-refs
                             (eval-formula sheet)
                             (swap! cell-state assoc :value)))))))
-    (let [value (eval-formula sheet parsed-formula)]
-      (println "formula =" formula "value =" value)
+    (let [value (eval-formula sheet parsed-formula-with-refs)]
+      #_(println "formula =" formula "value =" value)
       (swap! cell-state assoc :formula formula
-             :value   value))))
+                              :value   value))))
 
 (defn cell
   [sheet key]
@@ -251,7 +284,7 @@
                        (set! (.. e -target -value)
                              (or formula value)))
            :on-blur (fn [e]
-                      (println "on-blur called. e.target.value=" (.. e -target -value))
+                      #_(println "on-blur called. e.target.value=" (.. e -target -value))
                       (when-not (string/blank? (.. e -target -value))
                         (set-cell-formula! sheet cell-state (.. e -target -value))
                         (set! (.. e -target -value) nil)))
