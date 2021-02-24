@@ -110,24 +110,22 @@
   [date-type disabled]
   (let [date-string (r/cursor flight-state [date-type])
         is-date-string-valid (string->date @date-string)]
-    [:input {:class (when-not is-date-string-valid "error")
-             :value @date-string
-             :disabled disabled
-             :on-change #(update-date! flight-state date-type (input-event->value %))}]))
+    [:input.flight-booker--date-input
+     {:class (when-not is-date-string-valid "error")
+      :value @date-string
+      :disabled disabled
+      :on-change #(update-date! flight-state date-type (input-event->value %))}]))
 
 (defn flight-booker []
-  [:div.form
-   [:select.input
+  [:div.flight-booker--wrapper.form
+   [:select.flight-booker--type-select
     {:on-change (fn [e]
                   (swap! flight-state assoc :flight-type (input-event->value e)))}
     (for [flight-type flight-types]
       ^{:key flight-type} [:option {:value flight-type} flight-type])]
-   [:br]
    [date-input :start-date-string false]
-   [:br]
    [date-input :return-date-string (return-date-input-disabled? flight-state)]
-   [:br]
-   [:button
+   [:button.flight-booker--button
     {:disabled (not (valid-booking? flight-state))
      :on-click #(js/alert (booking-message flight-state))}
     "Book"]])

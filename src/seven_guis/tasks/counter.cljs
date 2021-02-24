@@ -6,7 +6,11 @@
   (let [click-counter (r/atom 0)]
     (fn []
       [:div
-       [:div (str @click-counter)]
-       [:button {:on-click 
-                 (fn [_e] (swap! click-counter inc))}
-        "Count"]])))
+       [:span
+        [:input.short-input 
+         {:type "number"
+          :value (str @click-counter)
+          :read-only true}]
+        [:button 
+         {:on-click (fn [_e] (swap! click-counter inc))}
+         "Count"]]])))

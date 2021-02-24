@@ -53,10 +53,13 @@
 (defn filter-surname-prefix
   "Takes a map `persons-map` of the format {id {:name name :surname surname}} and returns a map of those whose surname begin with `surname-prefix`."
   [persons-map surname-prefix]
-  (->> persons-map
-       (filter (fn [[_id person]]
-                 (string/starts-with? (:surname person) surname-prefix)))
-       (into {})))
+  (let [lowercase-surname-prefix (string/lower-case surname-prefix)]
+    (->> persons-map
+         (filter (fn [[_id person]]
+                   (string/starts-with?
+                    (string/lower-case (:surname person)) 
+                    lowercase-surname-prefix)))
+         (into {}))))
 
 (defn- select-person-with-id!
   "Update `component-state` so that person with id `id` is selected, and their name and surname are populated in corresponding text fields.
@@ -84,9 +87,9 @@
     (fn []
       (let [{:keys [surname-prefix-input selected-person-id name-inputs]} @component-state 
             {:keys [name surname]} name-inputs]
-        [:div.form
-         [:div.row
-          [:div.column
+        [:div.crud--wrapper
+         [:div.flex-row
+          [:div.flex-column
            [:label.crud--label "Filter prefix:"
             [:input.crud--input
              {:value     surname-prefix-input
@@ -103,18 +106,21 @@
                                                                      surname-prefix-input)]
               ^{:key id} [:option {:value id}
                           (str surname ", " name)])]]
-          [:div.column
-           [:label.crud--label "Name:"
+          [:div.flex-column
+           [:label.crud--label 
+            "Name:"
             [:input.crud--input
              {:value     name
               :on-change #(swap! component-state assoc-in [:name-inputs :name]
                                                           (input-event->value %))}]]
-           [:label.crud--label "Surname:"
+           [:label.crud--label 
+            "Surname:"
             [:input.crud--input
              {:value     surname
               :on-change #(swap! component-state assoc-in [:name-inputs :surname]
                                                           (input-event->value %))}]]]]
-         [:div.row
+         [:div.flex-break]
+         [:div.flex-row
           [:button.crud--button
            {:on-click #(create-person! db-state name-inputs)
             :disabled (name-surname-invalid? name surname)}

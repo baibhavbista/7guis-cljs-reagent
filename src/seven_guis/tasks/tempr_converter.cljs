@@ -63,18 +63,19 @@
 (defn tempr-input
   "Reagent component for a single input element (of type number) for temperatures of given `unit`."
   [unit]
-  [:input {:type "number"
-           :step 0.1
-           :value (get @tempr-state unit "")
-           :on-change #(let [new-tempr (event->float %)]
-                         (update-tempr! tempr-state unit new-tempr))}])
+  [:input.short-input 
+   {:type "number"
+    :step 0.1
+    :value (get @tempr-state unit "")
+    :on-change #(let [new-tempr (event->float %)]
+                  (update-tempr! tempr-state unit new-tempr))}])
 
 (defn tempr-converter []
   [:div
    [:span
     [tempr-input :celsius]
-    [:label " Celsius"]]
-   " = "
+    [:label "Celsius"]]
+   "="
    [:span
     [tempr-input :fahrenheit]
-    [:label " Fahrenheit"]]])
+    [:label "Fahrenheit"]]])

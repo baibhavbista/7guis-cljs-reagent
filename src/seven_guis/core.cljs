@@ -1,6 +1,6 @@
 (ns seven-guis.core
-    (:require [reagent.core :as reagent :refer [atom]]
-              [reagent.dom :as rd]
+    (:require [reagent.dom :as rd]
+              [seven-guis.container :refer [container]]
               [seven-guis.tasks.counter :refer [counter]]
               [seven-guis.tasks.tempr-converter :refer [tempr-converter]]
               [seven-guis.tasks.flight-booker :refer [flight-booker]]
@@ -11,27 +11,48 @@
 
 (enable-console-print!)
 
-(println "This text is printed from src/seven-guis/core.cljs. Go ahead and edit it and see reloading in action.")
+(def tasks
+  [{:title "Counter"
+    :description "sth"
+    :component counter}
+   {:title "Temperature Converter"
+    :description "sth"
+    :component tempr-converter}
+   {:title "Flight Booker"
+    :description "sth"
+    :component flight-booker}
+   {:title "Timer"
+    :description "sth"
+    :component timer}
+   {:title "CRUD"
+    :description "sth"
+    :component crud}
+   {:title "Circle Drawer"
+    :description "sth"
+    :component circle-drawer}
+   {:title "Cells"
+    :description "sth"
+    :component cells}])
 
-;; define your app data so that it doesn't get over-written on reload
-
-(defonce app-state (atom {:text "Hello world!"}))
 
 (defn app []
   [:div
-   [counter]
-   [tempr-converter]
-   [flight-booker]
-   [timer]
-   [crud]
-   [circle-drawer]
-   [cells]])
+   [:div
+    [:h1 "7GUIs solutions in Clojurescript + Reagent"]
+    [:p 
+     [:a
+      {:href "https://eugenkiss.github.io/7guis/"}
+      "7GUIs"]
+     " is a GUI programming benchmark that defines seven tasks that represent typical challenges in GUI programming."]
+    [:p 
+     "Source code:" 
+     [:a
+      {:href "https://github.com/baibhavbista/7guis-cljs-reagent"}
+      "Github"]]]
+   [:div
+    (for [{:keys [title description component]} tasks]
+      ^{:key title}
+      [container title description [component]])]])
 
 (rd/render [app]
            (. js/document (getElementById "app")))
-
-(defn on-js-reload []
-  ;; optionally touch your app-state to force rerendering depending on
-  ;; your application
-  ;; (swap! app-state update-in [:__figwheel_counter] inc)
-)

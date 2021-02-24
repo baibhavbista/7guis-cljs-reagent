@@ -177,7 +177,7 @@
     (when (:display @state)
       [:div
        [:div.circle-drawer--overlay {:on-click #(save-and-close-resize-dialog! app-state)}]
-       [:div.circle-drawer--dialog.column
+       [:div.circle-drawer--dialog.flex-column
         [:label
          (str "Adjust diameter of circle at (" (:x @state) ", " (:y @state) ").")]
         [:input
@@ -201,9 +201,9 @@
             :on-context-menu right-click-handler}])
 
 (defn circle-drawer []
-  [:div.column.circle-drawer--wrapper
+  [:div.flex-column.circle-drawer--wrapper
    [resize-dialog]
-   [:div.row.circle-drawer--buttons
+   [:div.flex-row.circle-drawer--buttons
     [:button
      {:on-click (fn [_e] (undo! app-state))
       :disabled (not (can-undo? (:current-index @app-state)
@@ -213,9 +213,10 @@
      {:on-click (fn [_e] (redo! app-state))
       :disabled (not (can-redo? (:current-index @app-state)))}
      "Redo"]]
-   [:div.row.circle-drawer--canvas
+   [:div.flex-row.circle-drawer--canvas
     [menu/context-menu]
-    [:svg {:on-click #(handle-left-click-on-canvas app-state %)}
+    [:svg.circle-drawer--svg
+     {:on-click #(handle-left-click-on-canvas app-state %)}
      (for [[id circle-map] (map-indexed vector (get @app-state :working-state))]
        ^{:key id} [circle-svg 
                    circle-map

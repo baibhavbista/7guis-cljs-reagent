@@ -62,16 +62,18 @@
       (let [{:keys [elapsed duration]} @timer-state
             display-elapsed  (str (.toFixed elapsed 1) "s")
             display-duration (str (.toFixed duration 0) "s")]
-        [:div.form
+        [:div.timer--wrapper
          [:label
           "Elapsed Time:"
-          [:progress
+          [:progress.timer--range-display
            {:value elapsed
             :max   duration}]
-          [:output display-elapsed]]
+          [:output.timer--seconds-output 
+           display-elapsed]]
          [:br]
-         [:label "Duration"
-          [:input
+         [:label
+          "Full Duration:"
+          [:input.timer--range-display
            {:type :range
             :value duration
             :on-change (fn [e] (set-duration! timer-state
@@ -79,7 +81,8 @@
             :step 1
             :min 0
             :max 100}]
-          [:output display-duration]]
+          [:output.timer--seconds-output 
+           display-duration]]
          [:br]
          [:button
           {:on-click (fn [_e] (reset-timer! timer-state))}

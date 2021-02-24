@@ -87,12 +87,6 @@
                                [col row]))))}
    parsed-formula))
 
-#_(defn parse-formula [formula-str]
-  (let [parsed-formula (parser formula-str)]
-    (if (insta/failure? parsed-formula)
-      (ex-info "ERR!" {:detailed-error (str (insta/get-failure parsed-formula))})
-      parsed-formula)))
-
 (defn parsed-formula-with-refs [formula-str]
   (let [parsed-formula (parser formula-str)]
     (if (insta/failure? parsed-formula)
@@ -100,7 +94,9 @@
       (parsed-formula->parsed-formula-with-refs parsed-formula))))
 
 
-(parsed-formula-with-refs "")
+
+(parsed-formula-with-refs "3/C1")
+
 ;; (parse-formula "=add(1,2)")
 ;; ;; => [:formula [:expr [:app [:ident "add"] [:expr [:decimal "1"]] [:expr [:decimal "2"]]]]]
 
@@ -150,9 +146,9 @@
                                 (-> (get sheet key)
                                     deref
                                     (get :value))))}
-     {:decimal #(js/parseFloat %)
+     {:decimal js/parseFloat
       :ident   (fn [ident] (identifier->function (string/lower-case ident)))
-      :textual #(constantly 0.0)
+      :textual identity
       :ref     (fn [key]
                  (let [cell-atom (get sheet key)]
                    (:value @cell-atom)))
@@ -168,6 +164,14 @@
       :expr    identity
       :formula identity}
      parsed-formula-with-refs)))
+
+;; (eval-formula sheet [:formula [:textual "3/C1"]])
+
+;; (->
+;;  (parsed-formula-with-refs "3/C1")
+;;  ;; => [:formula [:textual "3/C1"]]
+
+;;  (eval-formula sheet))
 
 ;; (flatten [[2] [3]])
 ;; (flatten [[2 3]])
@@ -255,6 +259,7 @@
 
 (defn set-cell-formula!
   [sheet cell-state formula]
+  #_(println "set-cell-formula called with" cell-state formula)
   (remove-cell-watches! sheet cell-state)
   (let [parsed-formula-with-refs (parsed-formula-with-refs formula)]
     (doseq [key-of-cell-to-watch (keys-of-cells-formula-depends-on formula)
@@ -268,6 +273,7 @@
                             (swap! cell-state assoc :value)))))))
     (let [value (eval-formula sheet parsed-formula-with-refs)]
       #_(println "formula =" formula "value =" value)
+      (println value)
       (swap! cell-state assoc :formula formula
                               :value   value))))
 
@@ -291,7 +297,8 @@
            :on-key-press (fn [e]
                            (when (= "Enter" (.-key e))
                              (.preventDefault e)
-                             (.blur (.-target e))))}]]))))
+                             (.blur (.-target e))))
+           :class (when error-message "error")}]]))))
 
 (defn row
   [sheet row-n]
@@ -304,8 +311,8 @@
 (defn cells []
   (let []
     (fn []
-      [:div
-       [:table
+      [:div.cells--wrapper
+       [:table.cells-table
         [:thead
          [:tr
           [:th nil]
