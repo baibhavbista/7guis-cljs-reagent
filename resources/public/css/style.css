@@ -173,6 +173,10 @@ circle:hover {
   fill: #eee;
 }
 
+circle.selected{
+  fill: #eee;
+}
+
 
 /* Task 7: Cells */
 
