@@ -46,12 +46,20 @@
   [char]
   (- (.charCodeAt char 0) (.charCodeAt \A 0)))
 
-(char->col-num "A")
-
 (defn col-num->char
   [col-num]
   (js/String.fromCharCode (+ (.charCodeAt \A 0) col-num)))
 
+(comment 
+  (char->col-num "A")
+  ;; => 0
+  (char->col-num "Z")
+  ;; => 25
+  (col-num->char 0)
+  ;; => "A"
+  (col-num->char 25)
+  ;; => "Z"
+  )
 
 (def identifier->function
   {"add" #(+ %1 %2)
@@ -75,7 +83,7 @@
     decimal = #'-?\\d+(\\.\\d*)?'
     "))
 
-(defn parsed-formula->parsed-formula-with-refs
+(defn- parsed-formula->parsed-formula-with-refs
   "Converts :cell to :ref and and :range to :refs 
    example: [:cell `A1`]                       => [:refs [1 1]]
             [:range [:cell `A1`] [:cell `B2`]] => [:refs [1 1] [2 1] [1 2] [2 2]]
@@ -105,57 +113,34 @@
 
 
 (parsed-formula-with-refs "3/C1")
+;; => [:formula [:textual "3/C1"]]
 
-;; (parse-formula "=add(1,2)")
-;; ;; => [:formula [:expr [:app [:ident "add"] [:expr [:decimal "1"]] [:expr [:decimal "2"]]]]]
+(parsed-formula-with-refs "=add(1,2)")
+;; => [:formula [:expr [:app [:ident "add"] [:expr [:decimal "1"]] [:expr [:decimal "2"]]]]]
 
-;; (parse-formula "=sub(B1,B3)")
-;; ;; => [:formula [:expr [:app [:ident "sub"] [:expr [:cell "B1"]] [:expr [:cell "B3"]]]]]
+(parsed-formula-with-refs "=sub(B1,B3)")
+;; => [:formula [:expr [:app [:ident "sub"] [:expr [:refs [1 1]]] [:expr [:refs [1 3]]]]]]
 
-;; (parse-formula "=prod(B1:B3)")
-;; ;; [:formula [:expr [:app [:ident "prod"] [:expr [:range [:cell "B1"] [:cell "B3"]]]]]]
+(parsed-formula-with-refs "=prod(B1:B3)")
+;; => [:formula [:expr [:app [:ident "prod"] [:expr [:refs [1 1] [1 2] [1 3]]]]]]
 
-;; (parse-formula "=B1:B3")
-;; ;; => [:invalid]
+(parsed-formula-with-refs "=B1:B3")
+;; => [:formula [:expr [:refs [1 1] [1 2] [1 3]]]]
 
-;; (parse-formula "54")
-;; ;; => [:formula [:decimal "54"]]
+(parsed-formula-with-refs "54")
+;; => [:formula [:decimal "54"]]
 
-;; (apply concat [[1 2]] [[3 4]] [])
-;; ;; => ([1 2] [3 4])
+(parsed-formula-with-refs "=add(sum(A1:B2),B3)")
+;; => [:formula [:expr [:app [:ident "add"] [:expr [:app [:ident "sum"] [:expr [:refs [0 1] [1 1] [0 2] [1 2]]]]] [:expr [:refs [1 3]]]]]]
 
-;; (apply concat [[1 2] [3 4]] [])
-;; ;; => ([1 2] [3 4])
-
-
-
-;; (#(let [c (char->col-num (.charAt % 0))
-;;         r (js/parseInt (subs % 1))
-;;         key (vector c r)]
-;;     key) "Z99")
-
-;; (defn vectorify [& args]
-;;   (if (vector? )))
-
-;; (-> "=A1"
-;;     parse-formula
-;;     parsed-formula->parsed-formula-with-refs)
-
-;; (-> "=add(sum(A1:B2),B3)"
-;;     parse-formula
-;;     parsed-formula->parsed-formula-with-refs)
 
 
 (defn eval-formula
   "Evaluated `parsed-formula-with-refs` using value of cells in sheet"
   [sheet parsed-formula-with-refs]
   (if (ex-message parsed-formula-with-refs)
-    parsed-formula-with-refs                         ; if error while parsing return ExceptionInfo object directly
+    parsed-formula-with-refs                ; if error while parsing return ExceptionInfo object directly
     (insta/transform
-     #_{:refs    (fn [& keys] (for [key keys]
-                                (-> (get sheet key)
-                                    deref
-                                    (get :value))))}
      ;; insta/transform expects a map of functions for each type in the CFG, which it applies to transform the parsed tree.
      ;; Here, functions are supplied as to evaluate the value of the formula
      {:decimal js/parseFloat
@@ -175,17 +160,13 @@
       :formula identity}
      parsed-formula-with-refs)))
 
-;; (eval-formula sheet [:formula [:textual "3/C1"]])
+(eval-formula sheet [:formula [:textual "3/C1"]])
 
 ;; (->
 ;;  (parsed-formula-with-refs "3/C1")
 ;;  ;; => [:formula [:textual "3/C1"]]
 
 ;;  (eval-formula sheet))
-
-;; (flatten [[2] [3]])
-;; (flatten [[2 3]])
-
 
 ;; (filter (fn [[_ atom]]
 ;;           (:value @atom))
@@ -209,10 +190,6 @@
    If parser error, returns nil.
    E.g. given formula `=add(B1,B2)` returns ([1 1] [1 2])"
   [formula]
-  #_(->> formula
-       parse-formula
-       parsed-formula->parsed-formula-with-refs
-       (insta/transform))
   (when formula
     (let [parsed-formula-with-refs (parsed-formula-with-refs formula)]
       (when-not (ex-message parsed-formula-with-refs)  ; return nil when parser error (when parsed-formula-with-refs returns ExceptionInfo) 
@@ -231,32 +208,21 @@
 
 ;; (keys-of-cells-formula-depends-on nil)
 
-;; (concat nil [[1 2] [1 3] [1 5]])
-;; ;; => ([1 2] [1 3] [1 5])
-
-;; (concat nil [[1 2]] [[1 3]])
-;; ;; => ([1 2] [1 3])
-
 
 ;; (parse-formula "=add(B1,B2)")
 ;; ;; => [:formula [:expr [:app [:ident "add"] [:expr [:cell "B1"]] [:expr [:cell "B2"]]]]]
 
-;; (keys-of-cells-formula-depends-on "=add(B1,B2)")
+(keys-of-cells-formula-depends-on "=add(B1,B2)")
 ;; => ([1 1] [1 2])
 
-;; (keys-of-cells-formula-depends-on "=sum(add(A1,sum(A3:A9)),B3,C11)")
-;; [[[[0 1] [1 1] [0 2] [1 2]]] [[1 3]]]
+(keys-of-cells-formula-depends-on "=sum(add(A1,sum(A3:A9)),B3,C11)")
+;; => ([0 1] [0 3] [0 4] [0 5] [0 6] [0 7] [0 8] [0 9] [1 3] [2 11])
 
-;; (parsed-formula-with-refs nil)
+(parsed-formula-with-refs "=add(B1,prod(B1:C3))")
+;; => [:formula [:expr [:app [:ident "add"] [:expr [:refs [1 1]]] [:expr [:app [:ident "prod"] [:expr [:refs [1 1] [2 1] [1 2] [2 2] [1 3] [2 3]]]]]]]]
 
-
-
-;; (parse-formula "=add(B1,prod(B1:C3))")
-;; (keys-of-cells-formula-depends-on "=add(B1,prod(B1:C3))")
-
-
-
-;; [:formula [:expr [:app [:ident "add"] [:expr [:cell "B1"]] [:expr [:app [:ident "prod"] [:expr [:range [:cell "B1"] [:cell "C3"]]]]]]]]
+(keys-of-cells-formula-depends-on "=add(B1,prod(B1:C3))")
+;; => ([1 1] [1 1] [2 1] [1 2] [2 2] [1 3] [2 3])
 
 
 
@@ -293,6 +259,7 @@
                :formula formula
                :value   value)))))
 
+;;; REAGENT COMPONENTS
 (defn cell
   "Reagent component for a single cell in the sheet"
   [sheet key]
@@ -329,7 +296,7 @@
   "Reagent component for task 7: Cells"
   []
   [:div.cells--wrapper
-   [:table.cells-table
+   [:table.cells--table
     [:thead
      [:tr
       [:th nil]

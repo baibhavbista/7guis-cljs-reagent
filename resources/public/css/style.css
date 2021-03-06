@@ -60,6 +60,7 @@
 
 .flight-booker--date-input {
   margin-bottom: 5px;
+  width:100%;
 }
 
 .flight-booker--button {
@@ -185,6 +186,6 @@ circle.selected{
   overflow: scroll;
 }
 
-.cells-table {
+.cells--table {
   position: relative
 }

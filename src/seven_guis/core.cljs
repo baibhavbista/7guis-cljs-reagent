@@ -13,25 +13,40 @@
 
 (def tasks
   [{:title "Counter"
-    :description "sth"
     :component counter}
    {:title "Temperature Converter"
-    :description "sth"
     :component tempr-converter}
    {:title "Flight Booker"
-    :description "sth"
     :component flight-booker}
    {:title "Timer"
-    :description "sth"
     :component timer}
    {:title "CRUD"
-    :description "sth"
     :component crud}
    {:title "Circle Drawer"
-    :description "sth"
+    :description-hiccup
+    [:p 
+     "Click on the canvas to create a circle" [:br]
+     "Right click on a circle to get option to resize it. Click anywhere on the canvas outside the resize window after you are done resizing."]
     :component circle-drawer}
    {:title "Cells"
-    :description "sth"
+    :description-hiccup
+    [:p
+     "Formulas have to be prefixed with a '='" [:br]
+     "operations available: add, sub, div, mul, mod, sum, prod" [:br]
+     "Cells representation examples:  A0, Z99" [:br]
+     "A range example  C3:C10" [:br]
+     "Usage examples: (Note no spaces!!)" [:br]
+     "=add(3,4)" [:br]
+     "=sub(4,D3)" [:br]
+     "=div(3,2)" [:br]
+     "=mul(D1,D3)" [:br]
+     "=mod(D3,D1)" [:br]
+     "=sum(3,4,5)" [:br]
+     "=sum(D1,D2,D5)" [:br]
+     "=sum(D1:D3)" [:br]
+     "=prod(3,4,5)" [:br]
+     "=prod(D1,D2,D5)" [:br]
+     "=prod(D1:D3)" [:br]]
     :component cells}])
 
 
@@ -50,9 +65,9 @@
       {:href "https://github.com/baibhavbista/7guis-cljs-reagent"}
       "Github"]]]
    [:div
-    (for [{:keys [title description component]} tasks]
+    (for [{:keys [title description-hiccup component]} tasks]
       ^{:key title}
-      [container title description [component]])]])
+      [container title description-hiccup [component]])]])
 
 (rd/render [app]
            (. js/document (getElementById "app")))
