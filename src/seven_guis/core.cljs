@@ -11,6 +11,7 @@
 
 (enable-console-print!)
 
+;; a vector of task maps, each with :title, :component and an optional :description-hiccup
 (def tasks
   [{:title "Counter"
     :component counter}

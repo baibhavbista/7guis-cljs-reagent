@@ -17,7 +17,8 @@
 (def init-persons-map
   {0 {:name "Hans" :surname "Emil"}
    1 {:name "Max" :surname "Mustermann"}
-   2 {:name "Roman" :surname "Tisch"}})
+   2 {:name "Roman" :surname "Tisch"}
+   3 {:name "Baibhav" :surname "Bista"}})
 
 ;; :next-id stores the id for next new record
 ;; this is incremented after every creation so that ids are always unique 
