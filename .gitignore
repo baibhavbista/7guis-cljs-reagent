@@ -1,5 +1,3 @@
-/resources/public/js/compiled/**
-figwheel_server.log
 pom.xml
 *jar
 /lib/
@@ -11,9 +9,8 @@ pom.xml
 .lein-plugins/
 .repl
 .nrepl-port
+.cpcache/
+.rebel_readline_history
 .calva
-.clj-kondo/cache/
-.clj-kondo/.cache/
-.lsp/sqlite.db
-.lsp/sqlite.*.db
-node_modules/
+.lsp
+resources/public/cljs-out/
