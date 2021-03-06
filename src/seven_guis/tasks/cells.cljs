@@ -50,17 +50,6 @@
   [col-num]
   (js/String.fromCharCode (+ (.charCodeAt \A 0) col-num)))
 
-(comment 
-  (char->col-num "A")
-  ;; => 0
-  (char->col-num "Z")
-  ;; => 25
-  (col-num->char 0)
-  ;; => "A"
-  (col-num->char 25)
-  ;; => "Z"
-  )
-
 (def identifier->function
   {"add" #(+ %1 %2)
    "sub" #(- %1 %2)
@@ -110,31 +99,6 @@
       (ex-info "ERR!" {:detailed-error (str (insta/get-failure parsed-formula))})
       (parsed-formula->parsed-formula-with-refs parsed-formula))))
 
-
-
-(parsed-formula-with-refs "3/C1")
-;; => [:formula [:textual "3/C1"]]
-
-(parsed-formula-with-refs "=add(1,2)")
-;; => [:formula [:expr [:app [:ident "add"] [:expr [:decimal "1"]] [:expr [:decimal "2"]]]]]
-
-(parsed-formula-with-refs "=sub(B1,B3)")
-;; => [:formula [:expr [:app [:ident "sub"] [:expr [:refs [1 1]]] [:expr [:refs [1 3]]]]]]
-
-(parsed-formula-with-refs "=prod(B1:B3)")
-;; => [:formula [:expr [:app [:ident "prod"] [:expr [:refs [1 1] [1 2] [1 3]]]]]]
-
-(parsed-formula-with-refs "=B1:B3")
-;; => [:formula [:expr [:refs [1 1] [1 2] [1 3]]]]
-
-(parsed-formula-with-refs "54")
-;; => [:formula [:decimal "54"]]
-
-(parsed-formula-with-refs "=add(sum(A1:B2),B3)")
-;; => [:formula [:expr [:app [:ident "add"] [:expr [:app [:ident "sum"] [:expr [:refs [0 1] [1 1] [0 2] [1 2]]]]] [:expr [:refs [1 3]]]]]]
-
-
-
 (defn eval-formula
   "Evaluated `parsed-formula-with-refs` using value of cells in sheet"
   [sheet parsed-formula-with-refs]
@@ -146,9 +110,6 @@
      {:decimal js/parseFloat
       :ident   (fn [ident] (identifier->function (string/lower-case ident)))
       :textual identity
-      #_:ref     #_(fn [key]
-                 (let [cell-atom (get sheet key)]
-                   (:value @cell-atom)))
       :refs    (fn [& keys]
                  (for [key keys]
                    (-> (get sheet key)
@@ -160,32 +121,7 @@
       :formula identity}
      parsed-formula-with-refs)))
 
-(eval-formula sheet [:formula [:textual "3/C1"]])
-
-;; (->
-;;  (parsed-formula-with-refs "3/C1")
-;;  ;; => [:formula [:textual "3/C1"]]
-
-;;  (eval-formula sheet))
-
-;; (filter (fn [[_ atom]]
-;;           (:value @atom))
-;;         sheet)
-
-;; (->> "4"
-;;      parse-formula
-;;      (eval-formula sheet))
-
-;; (->> "=add(C0,C1)"
-;;      parse-formula
-;;      (eval-formula sheet))
-
-;; (->> "=sum(C0:C2)"
-;;      parse-formula
-;;      (eval-formula sheet))
-
-
-(defn- keys-of-cells-formula-depends-on
+(defn keys-of-cells-formula-depends-on
   "Returns a list of the keys of the cells given `formula` depends on.
    If parser error, returns nil.
    E.g. given formula `=add(B1,B2)` returns ([1 1] [1 2])"
@@ -202,29 +138,6 @@
           :expr    identity
           :formula identity}
          parsed-formula-with-refs)))))
-
-;; (parsed-formula-with-refs "3")
-;; ;; => [:formula [:decimal "3"]]
-
-;; (keys-of-cells-formula-depends-on nil)
-
-
-;; (parse-formula "=add(B1,B2)")
-;; ;; => [:formula [:expr [:app [:ident "add"] [:expr [:cell "B1"]] [:expr [:cell "B2"]]]]]
-
-(keys-of-cells-formula-depends-on "=add(B1,B2)")
-;; => ([1 1] [1 2])
-
-(keys-of-cells-formula-depends-on "=sum(add(A1,sum(A3:A9)),B3,C11)")
-;; => ([0 1] [0 3] [0 4] [0 5] [0 6] [0 7] [0 8] [0 9] [1 3] [2 11])
-
-(parsed-formula-with-refs "=add(B1,prod(B1:C3))")
-;; => [:formula [:expr [:app [:ident "add"] [:expr [:refs [1 1]]] [:expr [:app [:ident "prod"] [:expr [:refs [1 1] [2 1] [1 2] [2 2] [1 3] [2 3]]]]]]]]
-
-(keys-of-cells-formula-depends-on "=add(B1,prod(B1:C3))")
-;; => ([1 1] [1 1] [2 1] [1 2] [2 2] [1 3] [2 3])
-
-
 
 (defn remove-cell-watches!
   "Removes watches on the cell. should be called before changing cell formula"
