@@ -1,0 +1,6 @@
+^{:watch-dirs ["test" "src"]
+  :css-dirs ["resources/public/css"]
+  :auto-testing true
+   }
+{:main seven-guis.core
+ :output-to "docs/cljs-out/dev-main.js"}

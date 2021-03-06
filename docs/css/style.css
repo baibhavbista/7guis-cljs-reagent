@@ -1,0 +1,191 @@
+/* some style */
+
+.container {
+  padding: 20px;
+  border: 1px solid #0a0a0a;
+  border-radius: 10px;
+  margin-top: 20px; 
+  margin-bottom: 20px;
+}
+
+.centered-wrapper {
+  position: relative;
+  margin: auto;
+  text-align: center;
+}
+
+.error {
+  background: #ff00009a;
+}
+
+.flex-column {
+  display: flex;
+  margin-right: 1em;
+  flex-grow: 1;
+  flex-direction: column;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.flex-break {
+  flex-basis: 100%;
+  height: 0;
+}
+
+.short-input {
+  width: 50px;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+
+
+/* Task 3: Flight Booker */
+
+.flight-booker--wrapper {
+  width: 165px;
+  position: relative;
+  margin: auto;
+  text-align: center;
+}
+
+.flight-booker--type-select {
+  width:100%;
+  margin-bottom: 5px;
+}
+
+.flight-booker--date-input {
+  margin-bottom: 5px;
+  width:100%;
+}
+
+.flight-booker--button {
+  width: 100%
+}
+
+
+/* Task 4: Timer */
+
+.timer--wrapper {
+  position: relative;
+  margin: auto;
+  text-align: center;
+  width: 400px;
+}
+
+.timer--range-display {
+  margin-left: 10px;
+  width: 200px;
+}
+
+.timer--seconds-output {
+  position: absolute;
+  right: 0 px;
+  width: 50px;
+  margin-left: 10px;
+}
+
+.timer--reset-button {
+  width: 100%;
+}
+
+
+/* Task 5: CRUD */
+
+.crud--wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  height: 20vh;
+}
+
+.crud--input {
+  flex-grow: 1;
+  margin-left: 1em;
+}
+
+.crud--label {
+  margin-bottom: 1em;
+
+}
+
+.crud--button {
+  flex-grow: 0.3;
+  margin-top: 1em;
+  margin-right: 1em;
+}
+
+
+/* Task 6: Circle Drawer */
+
+.circle-drawer--wrapper {
+  position: relative;
+  max-width: 600px;
+  margin: auto;
+  /* text-align: left; */
+}
+
+.circle-drawer--buttons {
+  margin: auto;
+  width: max-content;
+}
+
+.circle-drawer--canvas {
+  position: relative;
+  width: 100%;
+  height: 400px;
+}
+
+.circle-drawer--overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 99;
+  background: transparent;
+  /* background-color: rgba(0,0,0,0.2); */
+}
+
+.circle-drawer--dialog {
+  position: absolute;
+  top: 60%;
+  left: 20px;
+  right: 20px;
+  z-index: 100;
+  background-color: white;
+  border: 1px solid #aaa;
+  text-align: center;
+}
+
+.circle-drawer--svg {
+  background: white;
+  width: 100%;
+  height: 100%;
+  border: 1px solid black;
+}
+
+circle:hover {
+  fill: #eee;
+}
+
+circle.selected{
+  fill: #eee;
+}
+
+
+/* Task 7: Cells */
+
+.cells--wrapper {
+  max-height: 70vh;
+  overflow: scroll;
+}
+
+.cells--table {
+  position: relative
+}
