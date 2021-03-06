@@ -1,10 +1,10 @@
 # seven-guis
 
-FIXME: Write a one-line description of your library/project.
+[7GUIs](https://eugenkiss.github.io/7guis/) is a GUI programming benchmark that defines seven tasks that represent typical challenges in GUI programming.
+This is an implementation of the benchmark in Clojurescript + Reagent.
 
-## Overview
-
-FIXME: Write a paragraph about the library/project and highlight its goals.
+Deployed at: 
+**[Deployed demo](https://baibhavbista.github.io/7guis-cljs-reagent/)**
 
 ## Development
 
@@ -32,6 +32,6 @@ To create a production build run:
 
 ## License
 
-Copyright © 2018 FIXME
+Copyright © 2021 BAIBHAV BISTA
 
 Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
